@@ -1,0 +1,22 @@
+{
+    "summary": "The speaker asks what artificial intelligence is, describes it as automobile intelligence and technology using many computers to perform like humans, then asks about applications and notes its use in healthier education and other areas.",
+    "sentiment": "neutral",
+    "main_topics": [
+        "artificial intelligence",
+        "automobile intelligence",
+        "technology",
+        "computer performance",
+        "applications",
+        "education"
+    ],
+    "key_points": [
+        "AI is described as automobile intelligence and technology involving many computers that perform like humans.",
+        "AI is used in healthier education and many other areas."
+    ],
+    "questions": [
+        "What is artificial intelligence?",
+        "What are some applications?"
+    ],
+    "action_items": [],
+    "decisions": []
+}

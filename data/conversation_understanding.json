@@ -1,0 +1,66 @@
+{
+    "overall_understanding_score": 60.0,
+    "total_responses_analyzed": 4,
+    "responses": [
+        {
+            "turn_number": 1,
+            "from_speaker": "SPEAKER_01",
+            "to_speaker": "SPEAKER_00",
+            "previous_text": "is artificial intelligence?",
+            "response_text": "Automobile intelligence, technology, that are a lot of computer to perform at all, like the human.",
+            "evaluation": {
+                "relevance": "low",
+                "answers_question": false,
+                "topic_continuity": false,
+                "understanding_score": 15,
+                "off_topic": true,
+                "reason": "The previous speaker asked about 'artificial intelligence' but the response discusses 'automobile intelligence,' which is a completely different topic. The response does not address the question about AI and shows no understanding of the previous turn."
+            }
+        },
+        {
+            "turn_number": 2,
+            "from_speaker": "SPEAKER_00",
+            "to_speaker": "SPEAKER_01",
+            "previous_text": "Automobile intelligence, technology, that are a lot of computer to perform at all, like the human.",
+            "response_text": "are some applications?",
+            "evaluation": {
+                "relevance": "high",
+                "answers_question": true,
+                "topic_continuity": true,
+                "understanding_score": 70,
+                "off_topic": false,
+                "reason": "The response asks for applications of the automobile intelligence/technology mentioned by the previous speaker, showing engagement with the topic, though the response is a fragment and understanding is partial."
+            }
+        },
+        {
+            "turn_number": 3,
+            "from_speaker": "SPEAKER_01",
+            "to_speaker": "SPEAKER_01",
+            "previous_text": "are some applications?",
+            "response_text": "is used in healthier education and in many",
+            "evaluation": {
+                "relevance": "medium",
+                "answers_question": true,
+                "topic_continuity": true,
+                "understanding_score": 60,
+                "off_topic": false,
+                "reason": "The response attempts to list applications but is incomplete and grammatically fragmented, showing partial understanding."
+            }
+        },
+        {
+            "turn_number": 4,
+            "from_speaker": "SPEAKER_01",
+            "to_speaker": "SPEAKER_00",
+            "previous_text": "is used in healthier education and in many",
+            "response_text": "other areas.",
+            "evaluation": {
+                "relevance": "high",
+                "answers_question": true,
+                "topic_continuity": true,
+                "understanding_score": 95,
+                "off_topic": false,
+                "reason": "The response naturally completes the previous speaker's incomplete sentence, indicating good understanding and continuity."
+            }
+        }
+    ]
+}

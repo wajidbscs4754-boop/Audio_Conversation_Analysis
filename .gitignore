@@ -13,17 +13,6 @@ diarization_env/
 # Environment / secrets
 .env
 
-# Audio recordings
-*.wav
-*.mp3
-*.m4a
-*.flac
-*.ogg
-
-# Generated analysis files
-data/*.json
-data/*.txt
-
 # Jupyter
 .ipynb_checkpoints/
 

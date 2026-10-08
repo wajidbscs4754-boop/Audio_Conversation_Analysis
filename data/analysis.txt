@@ -1,0 +1,26 @@
+Summary:
+The speaker asks what artificial intelligence is, describes it as automobile intelligence and technology using many computers to perform like humans, then asks about applications and notes its use in healthier education and other areas.
+
+Sentiment:
+neutral
+
+Main Topics:
+- artificial intelligence
+- automobile intelligence
+- technology
+- computer performance
+- applications
+- education
+
+Key Points:
+- AI is described as automobile intelligence and technology involving many computers that perform like humans.
+- AI is used in healthier education and many other areas.
+
+Questions:
+- What is artificial intelligence?
+- What are some applications?
+
+Action Items:
+
+
+Important Decisions:
