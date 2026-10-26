@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import os
 import json
@@ -119,6 +118,13 @@ transcript = transcript_path.read_text(
 ).strip()
 
 
+if not transcript:
+
+    raise RuntimeError(
+        "transcript.txt is empty."
+    )
+
+
 # =====================================================
 # STEP 2: CONVERSATION TURNS
 # =====================================================
@@ -157,6 +163,7 @@ print("\n==============================")
 print("STEP 5: OpenRouter LLM Analysis")
 print("==============================")
 
+
 client = OpenAI(
     api_key=api_key,
     base_url="https://openrouter.ai/api/v1"
@@ -164,36 +171,46 @@ client = OpenAI(
 
 
 # =====================================================
-# STEP 6: LLM ANALYSIS
+# LLM PROMPTS
 # =====================================================
 
-response = client.chat.completions.create(
+system_prompt = """
+You are an audio conversation analysis assistant.
 
-    model="openrouter/free",
+Analyze the conversation accurately.
 
-    messages=[
+Do not invent information.
 
-        {
-            "role": "system",
-            "content": (
-                "You are an audio conversation "
-                "analysis assistant. "
-                "Analyze the conversation accurately. "
-                "Do not invent information."
-            )
-        },
+IMPORTANT:
+Return ONLY one valid JSON object.
 
-        {
-            "role": "user",
-            "content": f"""
+Do not return:
+- explanations
+- Markdown
+- ```json
+- safety messages
+- text before the JSON
+- text after the JSON
+
+The JSON must contain exactly these keys:
+
+summary
+sentiment
+main_topics
+key_points
+questions
+action_items
+decisions
+"""
+
+
+user_prompt = f"""
 Analyze the following conversation transcript.
 
 Transcript:
 {transcript}
 
-Return ONLY valid JSON.
-
-Use exactly this structure:
+Return JSON using exactly this structure:
 
 {{
     "summary": "Short summary of the conversation",
@@ -207,20 +224,59 @@ Use exactly this structure:
 
 Rules:
 
-- main_topics: list the main topics discussed.
-- key_points: list important points.
-- questions: list questions actually asked.
-- action_items: list tasks that need to be completed.
-- decisions: list important decisions made.
-- If there is no information for a section,
-  return an empty list [].
+- summary: Give a short accurate summary.
+- sentiment: Describe the overall tone of the conversation.
+- main_topics: List the main topics discussed.
+- key_points: List important points.
+- questions: List questions actually asked.
+- action_items: List tasks that need to be completed.
+- decisions: List important decisions made.
+- If there is no information for a section, return [].
 - Do not invent information.
-- Do not add Markdown.
-- Do not add ```json.
-- Return only the JSON object.
+- Return ONLY the JSON object.
 """
-        }
-    ]
+
+
+# =====================================================
+# FUNCTION: CALL OPENROUTER
+# =====================================================
+
+def call_openrouter(
+    system_message,
+    user_message
+):
+
+    response = client.chat.completions.create(
+
+        model="openrouter/free",
+
+        messages=[
+            {
+                "role": "system",
+                "content": system_message
+            },
+            {
+                "role": "user",
+                "content": user_message
+            }
+        ],
+
+        temperature=0
+    )
+
+    return response
+
+
+# =====================================================
+# STEP 6: FIRST LLM REQUEST
+# =====================================================
+
+print("\nSending conversation to OpenRouter...")
+
+
+response = call_openrouter(
+    system_prompt,
+    user_prompt
 )
 
 
@@ -260,7 +316,9 @@ if not response.choices:
 
 
 raw_analysis = (
-    response.choices[0].message.content
+    response.choices[0]
+    .message
+    .content
 )
 
 
@@ -271,15 +329,18 @@ if raw_analysis is None:
     )
 
 
-if not raw_analysis.strip():
+raw_analysis = raw_analysis.strip()
 
-    raise ValueError(
+
+if not raw_analysis:
+
+    raise RuntimeError(
         "The LLM returned an empty response."
     )
 
 
 # =====================================================
-# STEP 8: PARSE JSON
+# STEP 8: PARSE FIRST JSON RESPONSE
 # =====================================================
 
 try:
@@ -288,16 +349,251 @@ try:
         raw_analysis
     )
 
+    print(
+        "\nFirst LLM response was valid JSON."
+    )
+
 except json.JSONDecodeError:
 
-    raise ValueError(
-        "The LLM did not return valid JSON.\n\n"
-        f"LLM response:\n{raw_analysis}"
+    print(
+        "\nFirst LLM response was not valid JSON."
+    )
+
+    print(
+        "Retrying OpenRouter..."
     )
 
 
+    # =================================================
+    # RETRY PROMPT
+    # =================================================
+
+    retry_system_prompt = """
+You are a JSON formatting assistant.
+
+Return ONLY a valid JSON object.
+
+No explanation.
+No Markdown.
+No ```json.
+No safety message.
+No text before the JSON.
+No text after the JSON.
+
+Use exactly these keys:
+
+summary
+sentiment
+main_topics
+key_points
+questions
+action_items
+decisions
+"""
+
+
+    retry_user_prompt = f"""
+Analyze this conversation and return ONLY valid JSON.
+
+Conversation transcript:
+
+{transcript}
+
+Required structure:
+
+{{
+    "summary": "",
+    "sentiment": "",
+    "main_topics": [],
+    "key_points": [],
+    "questions": [],
+    "action_items": [],
+    "decisions": []
+}}
+
+Rules:
+
+- Use only information contained in the transcript.
+- Do not invent information.
+- questions must contain only questions actually asked.
+- main_topics must contain topics actually discussed.
+- key_points must contain important points from the transcript.
+- action_items should contain tasks only if they are actually mentioned.
+- decisions should contain decisions only if they are actually mentioned.
+- If a section has no information, return [].
+- Return ONLY the JSON object.
+"""
+
+
+    # =============================================
+    # RETRY REQUEST
+    # =============================================
+
+    retry_response = call_openrouter(
+        retry_system_prompt,
+        retry_user_prompt
+    )
+
+
+    # =============================================
+    # CHECK RETRY RESPONSE
+    # =============================================
+
+    print("\nFULL RETRY RESPONSE:")
+    print(retry_response)
+
+
+    if getattr(
+        retry_response,
+        "error",
+        None
+    ):
+
+        error = retry_response.error
+
+        message = error.get(
+            "message",
+            "Unknown OpenRouter error"
+        )
+
+        code = error.get(
+            "code",
+            "Unknown"
+        )
+
+        raise RuntimeError(
+            f"OpenRouter retry error: "
+            f"{message} (code: {code})"
+        )
+
+
+    if not retry_response.choices:
+
+        raise RuntimeError(
+            "OpenRouter retry returned no choices."
+        )
+
+
+    retry_raw = (
+        retry_response
+        .choices[0]
+        .message
+        .content
+    )
+
+
+    if retry_raw is None:
+
+        raise RuntimeError(
+            "OpenRouter retry returned no text."
+        )
+
+
+    retry_raw = retry_raw.strip()
+
+
+    if not retry_raw:
+
+        raise RuntimeError(
+            "OpenRouter retry returned empty text."
+        )
+
+
+    # =============================================
+    # PARSE RETRY JSON
+    # =============================================
+
+    try:
+
+        analysis_data = json.loads(
+            retry_raw
+        )
+
+        print(
+            "\nRetry response was valid JSON."
+        )
+
+    except json.JSONDecodeError:
+
+        raise ValueError(
+            "The LLM returned invalid JSON "
+            "even after retry.\n\n"
+            f"First response:\n"
+            f"{raw_analysis}\n\n"
+            f"Retry response:\n"
+            f"{retry_raw}"
+        )
+
+
 # =====================================================
-# STEP 9: CREATE TEXT ANALYSIS
+# STEP 9: VALIDATE JSON STRUCTURE
+# =====================================================
+
+required_fields = [
+
+    "summary",
+
+    "sentiment",
+
+    "main_topics",
+
+    "key_points",
+
+    "questions",
+
+    "action_items",
+
+    "decisions"
+
+]
+
+
+for field in required_fields:
+
+    if field not in analysis_data:
+
+        raise ValueError(
+            f"LLM JSON is missing required "
+            f"field: {field}"
+        )
+
+
+# =====================================================
+# VALIDATE LIST FIELDS
+# =====================================================
+
+list_fields = [
+
+    "main_topics",
+
+    "key_points",
+
+    "questions",
+
+    "action_items",
+
+    "decisions"
+
+]
+
+
+for field in list_fields:
+
+    if not isinstance(
+        analysis_data[field],
+        list
+    ):
+
+        print(
+            f"Warning: {field} was not a list. "
+            f"Converting to empty list."
+        )
+
+        analysis_data[field] = []
+
+
+# =====================================================
+# STEP 10: CREATE TEXT ANALYSIS
 # =====================================================
 
 analysis_text = f"""
@@ -325,13 +621,14 @@ Important Decisions:
 
 
 # =====================================================
-# STEP 10: SAVE TEXT ANALYSIS
+# STEP 11: SAVE TEXT ANALYSIS
 # =====================================================
 
 analysis_path.write_text(
     analysis_text,
     encoding="utf-8"
 )
+
 
 print(
     f"\nAnalysis saved to: "
@@ -340,17 +637,20 @@ print(
 
 
 # =====================================================
-# STEP 11: SAVE JSON ANALYSIS
+# STEP 12: SAVE JSON ANALYSIS
 # =====================================================
 
 json_path.write_text(
+
     json.dumps(
         analysis_data,
         indent=4,
         ensure_ascii=False
     ),
+
     encoding="utf-8"
 )
+
 
 print(
     f"JSON analysis saved to: "
@@ -366,22 +666,43 @@ print("\n==============================")
 print("Audio Conversation Analysis")
 print("==============================")
 
+
 print("\nTranscript:")
 print("------------------------------")
 print(transcript)
+
 
 print("\nAI Analysis:")
 print("------------------------------")
 print(analysis_text)
 
+
 print("\nFiles created:")
 print("------------------------------")
-print(f"- {transcript_path}")
-print(f"- {timestamp_path}")
-print("- data/speaker_transcript.txt")
-print("- data/conversation_turns.json")
-print(f"- {analysis_path}")
-print(f"- {json_path}")
+
+print(
+    f"- {transcript_path}"
+)
+
+print(
+    f"- {timestamp_path}"
+)
+
+print(
+    "- data/speaker_transcript.txt"
+)
+
+print(
+    "- data/conversation_turns.json"
+)
+
+print(
+    f"- {analysis_path}"
+)
+
+print(
+    f"- {json_path}"
+)
+
 
 print("\nPipeline completed successfully.")
-

@@ -8,7 +8,7 @@ from speech_region import load_audio, detect_speech_region
 # Configuration
 # ============================================================
 
-AUDIO_PATH = "data/syllable_test_new.wav"
+AUDIO_PATH = "data/computer_test.wav"
 
 
 # ============================================================
